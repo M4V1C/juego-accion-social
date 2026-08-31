@@ -153,16 +153,8 @@ class Renderer:
         pygame.draw.rect(self.screen, COLORS["panel_activo"],
                          (0, AREA_SUPERIOR_H, SCREEN_WIDTH, AREA_CENTRAL_BOTTOM - AREA_SUPERIOR_H))
 
-        # Zona 1: espacio para carta de evento (visible sólo en overlay).
-        rect_evento = pygame.Rect(60, 105, 220, 285)
-        pygame.draw.rect(self.screen, COLORS["blanco"], rect_evento, border_radius=8)
-        pygame.draw.rect(self.screen, COLORS["rojo"], rect_evento, 3, border_radius=8)
-        etiqueta = self.font_sm.render("Evento de Turno", True, COLORS["rojo"])
-        self.screen.blit(etiqueta, etiqueta.get_rect(center=(rect_evento.centerx, rect_evento.y + 16)))
-        # Al no haber evento, mostrar contador del mazo rojo.
-        info = f"Mazo Rojo: {len(ctrl.mazo_rojo)}   Descarte: {len(ctrl.descarte_rojo)}"
-        surf = self.font_xs.render(info, True, COLORS["gris_medio"])
-        self.screen.blit(surf, surf.get_rect(center=(rect_evento.centerx, rect_evento.bottom - 20)))
+        # Zona 1: panel de estado global persistente (ambos jugadores a la vez).
+        self._draw_status_panel(ctrl)
 
         # Zona 2: proyectos activos del jugador activo.
         rect_proj = pygame.Rect(310, 105, 720, 285)
@@ -220,6 +212,88 @@ class Renderer:
                 self._draw_card(carta, carta.rect,
                                 highlight=(ctrl.estado == GameState.TURNO_ACCION),
                                 affordable=(ctrl.jugador_activo.mc >= ctrl.jugador_activo.coste_efectivo(carta)))
+
+    # ---------------------- panel de estado global (izquierda del área central)
+    def _draw_status_panel(self, ctrl: GameController) -> None:
+        """Rectángulo persistente que muestra el estado de AMBOS jugadores.
+
+        Se dibuja sobre el área central sin alterar los paneles de proyectos
+        (rect_proj) ni de turno (rect_turno). Facilita la toma de decisiones
+        al ver simultáneamente MC, PI, proyectos y modificadores rivales.
+        """
+        panel = pygame.Rect(10, 100, 280, 295)
+        pygame.draw.rect(self.screen, COLORS["blanco"], panel, border_radius=8)
+        pygame.draw.rect(self.screen, COLORS["azul_texto"], panel, 3, border_radius=8)
+
+        # Título.
+        titulo = self.font_sm.render("ESTADO DE LA PARTIDA", True, COLORS["azul_texto"])
+        self.screen.blit(titulo, titulo.get_rect(center=(panel.centerx, panel.y + 12)))
+
+        # Dos mitades verticales, una por jugador.
+        mid_y = panel.y + 30
+        half_h = (panel.h - 44) // 2
+        j1 = pygame.Rect(panel.x + 6, mid_y,             panel.w - 12, half_h)
+        j2 = pygame.Rect(panel.x + 6, mid_y + half_h + 4, panel.w - 12, half_h)
+        self._draw_status_half(j1, ctrl.player1, "JUGADOR 1",
+                                activo=(ctrl.jugador_activo is ctrl.player1))
+        self._draw_status_half(j2, ctrl.player2, "JUGADOR 2",
+                                activo=(ctrl.jugador_activo is ctrl.player2))
+
+        # Pie con contador del mazo rojo (info que antes vivía en rect_evento).
+        info = f"Mazo Rojo: {len(ctrl.mazo_rojo)} · Descarte: {len(ctrl.descarte_rojo)}"
+        surf = self.font_xs.render(info, True, COLORS["gris_medio"])
+        self.screen.blit(surf, surf.get_rect(center=(panel.centerx, panel.bottom - 10)))
+
+    def _draw_status_half(self, rect: pygame.Rect, jugador, etiqueta: str,
+                          activo: bool) -> None:
+        # Fondo destacado si es el jugador activo.
+        color_fondo = COLORS["panel_activo"] if activo else COLORS["gris_claro"]
+        pygame.draw.rect(self.screen, color_fondo, rect, border_radius=6)
+        color_borde = COLORS["naranja"] if activo else COLORS["gris_medio"]
+        pygame.draw.rect(self.screen, color_borde, rect, 2, border_radius=6)
+
+        # Cabecera: etiqueta + marca de activo.
+        cabecera = etiqueta + ("  ◀ EN TURNO" if activo else "")
+        surf = self.font_sm.render(cabecera, True, color_borde)
+        self.screen.blit(surf, (rect.x + 6, rect.y + 4))
+
+        # Rol.
+        surf = self.font_xs.render(jugador.rol, True, COLORS["gris_oscuro"])
+        self.screen.blit(surf, (rect.x + 6, rect.y + 24))
+
+        # Stats: MC · PI · Proyectos · Mano.
+        stats = (f"MC {jugador.mc}   PI {jugador.pi}   "
+                 f"Proy {len(jugador.proyectos)}/{PROYECTOS_PARA_GANAR}   "
+                 f"Mano {len(jugador.mano)}")
+        surf = self.font_sm.render(stats, True, COLORS["negro"])
+        self.screen.blit(surf, (rect.x + 6, rect.y + 40))
+
+        # Ingresos por turno.
+        ing = f"Ingresos/turno: +{jugador.ingresos_totales()} MC"
+        surf = self.font_xs.render(ing, True, COLORS["azul_texto"])
+        self.screen.blit(surf, (rect.x + 6, rect.y + 62))
+
+        # Fila de badges de proyectos activos (siempre visible para ambos jugadores).
+        badge_y = rect.y + 80
+        slots = PROYECTOS_PARA_GANAR
+        badge_w = (rect.w - 12 - (slots - 1) * 4) // slots
+        badge_h = min(rect.h - 82 - 4, 34)
+        for i in range(slots):
+            bx = rect.x + 6 + i * (badge_w + 4)
+            slot_rect = pygame.Rect(bx, badge_y, badge_w, badge_h)
+            if i < len(jugador.proyectos):
+                p = jugador.proyectos[i]
+                pygame.draw.rect(self.screen, COLORS["naranja_claro"], slot_rect, border_radius=4)
+                pygame.draw.rect(self.screen, COLORS["naranja"], slot_rect, 2, border_radius=4)
+                surf = self.font_xs.render(p.id, True, COLORS["negro"])
+                self.screen.blit(surf, surf.get_rect(midtop=(slot_rect.centerx, slot_rect.y + 2)))
+                pi_txt = f"PI{p.puntos_pi}"
+                surf = self.font_xs.render(pi_txt, True, COLORS["gris_oscuro"])
+                self.screen.blit(surf, surf.get_rect(midbottom=(slot_rect.centerx, slot_rect.bottom - 2)))
+            else:
+                # Ranura vacía.
+                pygame.draw.rect(self.screen, COLORS["blanco"], slot_rect, border_radius=4)
+                pygame.draw.rect(self.screen, COLORS["gris_medio"], slot_rect, 1, border_radius=4)
 
     # ---------------------- overlays
     def _draw_overlay_manual(self, ctrl: GameController) -> None:
