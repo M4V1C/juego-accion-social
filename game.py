@@ -21,9 +21,30 @@ from cards import (
 )
 from constants import (
     MC_INICIAL, HAND_MAX, INITIAL_HAND, PROYECTOS_PARA_GANAR,
-    BTN_PASAR_RECT, BTN_ACEPTAR_RECT, BTN_REINICIAR_RECT, BTN_EMPEZAR_RECT,
+    BTN_PASAR_RECT, BTN_ACEPTAR_RECT, BTN_REINICIAR_RECT,
+    BTN_EMPEZAR_RECT, BTN_MANUAL_RECT, BTN_CERRAR_MANUAL_RECT,
     CARD_WIDTH, CARD_HEIGHT, CARD_GAP, HAND_Y, SCREEN_WIDTH,
 )
+
+
+# ---------------------------------------------------------------------------
+# Roles ficticios (se sortean 2 distintos al arrancar cada partida).
+# ---------------------------------------------------------------------------
+
+ROLES_POSIBLES = [
+    "Desarrollador de Software",
+    "Cineasta e Industrias Culturales",
+    "Chef Gastronómico Creativo",
+    "Diseñador de Videojuegos Indie",
+    "Músico Productor Digital",
+    "Diseñadora de Moda Sostenible",
+    "Actor y Director de Teatro",
+    "Guía de Turismo Cultural",
+    "Arquitecto de Espacios Culturales",
+    "Artista Digital / NFT",
+    "Ilustrador y Novelista Gráfico",
+    "Publicista Creativo",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -39,6 +60,7 @@ class GameState(Enum):
     EVALUAR_VICTORIA     = 6
     FIN_DE_JUEGO         = 7
     SELECCION_CARTA      = 8  # sub-estado auxiliar para efectos que requieren elegir carta
+    MANUAL               = 9  # tutorial superpuesto sobre el menú principal
 
 
 # ---------------------------------------------------------------------------
@@ -103,8 +125,9 @@ class Player:
 
 class GameController:
     def __init__(self):
-        self.player1 = Player("Emprendedor 1", "Desarrollador de Software")
-        self.player2 = Player("Emprendedor 2", "Cineasta e Industrias Culturales")
+        rol1, rol2 = random.sample(ROLES_POSIBLES, 2)
+        self.player1 = Player("Emprendedor 1", rol1)
+        self.player2 = Player("Emprendedor 2", rol2)
         self.jugador_activo: Player = self.player1
         self.oponente: Player = self.player2
 
@@ -132,6 +155,8 @@ class GameController:
         self.rect_aceptar = pygame.Rect(*BTN_ACEPTAR_RECT)
         self.rect_reiniciar = pygame.Rect(*BTN_REINICIAR_RECT)
         self.rect_empezar = pygame.Rect(*BTN_EMPEZAR_RECT)
+        self.rect_manual = pygame.Rect(*BTN_MANUAL_RECT)
+        self.rect_cerrar_manual = pygame.Rect(*BTN_CERRAR_MANUAL_RECT)
 
     # ------------------------------------------------------------------ ciclo
     def update(self, click_pos: Optional[tuple]) -> None:
@@ -139,8 +164,15 @@ class GameController:
         estado = self.estado
 
         if estado == GameState.MENU_PRINCIPAL:
-            if click_pos and self.rect_empezar.collidepoint(click_pos):
-                self.estado = GameState.INICIALIZACION
+            if click_pos:
+                if self.rect_empezar.collidepoint(click_pos):
+                    self.estado = GameState.INICIALIZACION
+                elif self.rect_manual.collidepoint(click_pos):
+                    self.estado = GameState.MANUAL
+
+        elif estado == GameState.MANUAL:
+            if click_pos and self.rect_cerrar_manual.collidepoint(click_pos):
+                self.estado = GameState.MENU_PRINCIPAL
 
         elif estado == GameState.INICIALIZACION:
             self.inicializar_partida()

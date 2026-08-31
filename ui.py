@@ -14,7 +14,8 @@ from cards import Card, CardType
 from constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, COLORS,
     CARD_WIDTH, CARD_HEIGHT, CARD_GAP, HAND_Y,
-    AREA_SUPERIOR_H, AREA_INFERIOR_Y, PROYECTOS_PARA_GANAR,
+    AREA_SUPERIOR_H, AREA_CENTRAL_BOTTOM, AREA_INFERIOR_Y,
+    LOG_BAND_Y, LOG_BAND_H, PROYECTOS_PARA_GANAR,
     PIB_MULTIPLICADOR,
 )
 from game import GameController, GameState, Player
@@ -61,6 +62,9 @@ class Renderer:
         estado = ctrl.estado
         if estado == GameState.MENU_PRINCIPAL:
             self._draw_menu(ctrl)
+        elif estado == GameState.MANUAL:
+            self._draw_menu(ctrl)
+            self._draw_overlay_manual(ctrl)
         elif estado == GameState.FIN_DE_JUEGO:
             self._draw_end_screen(ctrl)
         else:
@@ -95,8 +99,9 @@ class Renderer:
             line_h=32,
         )
 
-        # Botón "Empezar".
+        # Botones: Empezar (izquierda) y Manual (derecha).
         self._draw_button(ctrl.rect_empezar, "EMPEZAR", COLORS["azul_boton"])
+        self._draw_button(ctrl.rect_manual,  "CÓMO JUGAR", COLORS["verde"])
 
         # Pie: notas culturales.
         pie = "Basado en la Economía Naranja del BID y la carga regulatoria de Costa Rica"
@@ -146,10 +151,10 @@ class Renderer:
 
     def _draw_area_central(self, ctrl: GameController) -> None:
         pygame.draw.rect(self.screen, COLORS["panel_activo"],
-                         (0, AREA_SUPERIOR_H, SCREEN_WIDTH, AREA_INFERIOR_Y - AREA_SUPERIOR_H))
+                         (0, AREA_SUPERIOR_H, SCREEN_WIDTH, AREA_CENTRAL_BOTTOM - AREA_SUPERIOR_H))
 
         # Zona 1: espacio para carta de evento (visible sólo en overlay).
-        rect_evento = pygame.Rect(60, 120, 220, 300)
+        rect_evento = pygame.Rect(60, 105, 220, 285)
         pygame.draw.rect(self.screen, COLORS["blanco"], rect_evento, border_radius=8)
         pygame.draw.rect(self.screen, COLORS["rojo"], rect_evento, 3, border_radius=8)
         etiqueta = self.font_sm.render("Evento de Turno", True, COLORS["rojo"])
@@ -160,20 +165,27 @@ class Renderer:
         self.screen.blit(surf, surf.get_rect(center=(rect_evento.centerx, rect_evento.bottom - 20)))
 
         # Zona 2: proyectos activos del jugador activo.
-        rect_proj = pygame.Rect(310, 120, 720, 300)
+        rect_proj = pygame.Rect(310, 105, 720, 285)
         pygame.draw.rect(self.screen, COLORS["blanco"], rect_proj, border_radius=8)
         pygame.draw.rect(self.screen, COLORS["naranja"], rect_proj, 3, border_radius=8)
         etiqueta = self.font_sm.render(
             f"Proyectos activos de {ctrl.jugador_activo.nombre}",
             True, COLORS["naranja"])
         self.screen.blit(etiqueta, (rect_proj.x + 10, rect_proj.y + 6))
-        # Mini cartas de proyectos activos.
+        # Mini cartas: tamaño dinámico para que las 5 ranuras quepan.
+        slots = PROYECTOS_PARA_GANAR
+        inner_w = rect_proj.w - 20
+        slot_gap = 8
+        slot_w = (inner_w - (slots - 1) * slot_gap) // slots
+        slot_h = rect_proj.h - 50
         for i, p in enumerate(ctrl.jugador_activo.proyectos):
-            r = pygame.Rect(rect_proj.x + 20 + i * 230, rect_proj.y + 40, 210, 240)
+            r = pygame.Rect(
+                rect_proj.x + 10 + i * (slot_w + slot_gap),
+                rect_proj.y + 40, slot_w, slot_h)
             self._draw_card(p, r, mini=True)
 
         # Zona 3: información de turno / botón PASAR.
-        rect_turno = pygame.Rect(1060, 120, 200, 300)
+        rect_turno = pygame.Rect(1060, 105, 200, 285)
         pygame.draw.rect(self.screen, COLORS["blanco"], rect_turno, border_radius=8)
         pygame.draw.rect(self.screen, COLORS["azul_texto"], rect_turno, 3, border_radius=8)
         etiqueta = self.font_sm.render("Turno actual", True, COLORS["azul_texto"])
@@ -210,6 +222,64 @@ class Renderer:
                                 affordable=(ctrl.jugador_activo.mc >= ctrl.jugador_activo.coste_efectivo(carta)))
 
     # ---------------------- overlays
+    def _draw_overlay_manual(self, ctrl: GameController) -> None:
+        """Ventana modal con el tutorial. Se dibuja sobre el menú principal."""
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 170))
+        self.screen.blit(overlay, (0, 0))
+
+        # Panel centrado.
+        panel_w, panel_h = 940, 590
+        panel = pygame.Rect((SCREEN_WIDTH - panel_w) // 2, 50, panel_w, panel_h)
+        pygame.draw.rect(self.screen, COLORS["fondo_buttercream"], panel, border_radius=14)
+        pygame.draw.rect(self.screen, COLORS["naranja"], panel, 4, border_radius=14)
+
+        # Título del manual.
+        titulo = self.font_lg.render("CÓMO JUGAR — NARANJONOMÍA", True, COLORS["naranja"])
+        self.screen.blit(titulo, titulo.get_rect(center=(SCREEN_WIDTH // 2, panel.y + 30)))
+
+        # Contenido: pares (encabezado, líneas) con dos columnas.
+        secciones = [
+            ("OBJETIVO",
+             [f"Completa {PROYECTOS_PARA_GANAR} proyectos Naranjas activos, o",
+              "provoca la bancarrota del oponente (MC ≤ 0)."]),
+            ("RECURSOS",
+             ["Monedas Creativas (MC): financian todo.",
+              "Propiedad Intelectual (PI): puntaje cultural.",
+              "Mano: máximo 5 cartas."]),
+            ("TIPOS DE CARTAS",
+             ["Naranjas · Proyectos que dan PI y +MC/turno.",
+              "Verdes · Impulsores: descuentos, inmunidades, IA.",
+              "Rojas · Burocracia CR (CCSS, Hacienda, ACAM…)."]),
+            ("FASES DEL TURNO",
+             ["1) Inicio: cobras ingresos y robas 1 carta.",
+              "2) Acción: juegas UNA carta o pulsas PASAR.",
+              "3) Consecuencia: revelas 1 carta Roja y pagas."]),
+            ("CONSEJOS RÁPIDOS",
+             ["Compra pronto G2, G6 o G7 para bloquear rojas.",
+              "G1 (Claude CoWork) baja 50% coste Software/Diseño.",
+              "O3 es caro pero suelta +12 MC el turno siguiente."]),
+            ("CONTROLES",
+             ["Clic izquierdo sobre una carta de tu mano · jugarla.",
+              "Clic en el botón PASAR · saltar acción.",
+              "Esc · cerrar el juego."]),
+        ]
+        col_x = [panel.x + 30, panel.x + panel_w // 2 + 10]
+        y_col = [panel.y + 80, panel.y + 80]
+        for idx, (titulo_sec, lineas) in enumerate(secciones):
+            col = idx % 2
+            surf = self.font_md.render(titulo_sec, True, COLORS["azul_texto"])
+            self.screen.blit(surf, (col_x[col], y_col[col]))
+            y_col[col] += 28
+            for ln in lineas:
+                surf = self.font_sm.render(ln, True, COLORS["negro"])
+                self.screen.blit(surf, (col_x[col] + 8, y_col[col]))
+                y_col[col] += 22
+            y_col[col] += 10
+
+        # Botón cerrar.
+        self._draw_button(ctrl.rect_cerrar_manual, "CERRAR", COLORS["azul_boton"])
+
     def _draw_overlay_carta_roja(self, ctrl: GameController) -> None:
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 140))
@@ -245,10 +315,19 @@ class Renderer:
 
     # ---------------------- log
     def _draw_log(self, ctrl: GameController) -> None:
-        x, y0 = 20, SCREEN_HEIGHT - 130
-        for i, msg in enumerate(ctrl.log[-5:]):
+        # Banda dedicada entre el área central y la mano, para no pisar cartas.
+        pygame.draw.rect(self.screen, COLORS["gris_claro"],
+                         (0, LOG_BAND_Y, SCREEN_WIDTH, LOG_BAND_H))
+        pygame.draw.line(self.screen, COLORS["gris_medio"],
+                         (0, LOG_BAND_Y), (SCREEN_WIDTH, LOG_BAND_Y), 1)
+        pygame.draw.line(self.screen, COLORS["gris_medio"],
+                         (0, LOG_BAND_Y + LOG_BAND_H), (SCREEN_WIDTH, LOG_BAND_Y + LOG_BAND_H), 1)
+        etiqueta = self.font_xs.render("REGISTRO DE PARTIDA", True, COLORS["gris_oscuro"])
+        self.screen.blit(etiqueta, (20, LOG_BAND_Y + 2))
+        y0 = LOG_BAND_Y + 18
+        for i, msg in enumerate(ctrl.log[-3:]):
             surf = self.font_xs.render(msg, True, COLORS["gris_oscuro"])
-            self.screen.blit(surf, (x, y0 + i * 16))
+            self.screen.blit(surf, (20, y0 + i * 13))
 
     # ---------------------- final
     def _draw_end_screen(self, ctrl: GameController) -> None:
