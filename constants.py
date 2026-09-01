@@ -17,12 +17,12 @@ HAND_Y = 500  # baja para que la etiqueta y el log no se superpongan
 
 # Áreas horizontales.
 # El área central termina en 405 para dejar espacio a una banda de log,
-# y el área inferior de la mano arranca en 465 (55 px más alta que antes).
+# y el área inferior de la mano arranca en 470 (con margen contra la banda).
 AREA_SUPERIOR_H = 90
 AREA_CENTRAL_BOTTOM = 405
-AREA_INFERIOR_Y = 465
+AREA_INFERIOR_Y = 470
 LOG_BAND_Y = 407
-LOG_BAND_H = 55
+LOG_BAND_H = 60
 
 # Paleta ajustada al fondo "buttercream" y familia cromática Naranja/Verde/Rojo.
 COLORS = {
@@ -47,8 +47,10 @@ COLORS = {
 }
 
 # Botones estáticos en pantalla (rectángulos).
+# ACEPTAR está arriba de la banda de log para que no se superponga con la mano
+# cuando aparece el overlay de la carta Roja.
 BTN_PASAR_RECT         = (1055, 495, 205, 55)   # esquina inferior-derecha, junto a la mano
-BTN_ACEPTAR_RECT       = (SCREEN_WIDTH // 2 - 90, 560, 180, 55)
+BTN_ACEPTAR_RECT       = (SCREEN_WIDTH // 2 - 90, 515, 180, 55)
 BTN_REINICIAR_RECT     = (SCREEN_WIDTH // 2 - 110, 600, 220, 60)
 BTN_EMPEZAR_RECT       = (SCREEN_WIDTH // 2 - 260, 530, 240, 70)
 BTN_MANUAL_RECT        = (SCREEN_WIDTH // 2 +  20, 530, 240, 70)
@@ -62,6 +64,5 @@ HAND_MAX = 5
 INITIAL_HAND = 4
 PROYECTOS_PARA_GANAR = 5
 
-# Multiplicador BID para el "PIB Creativo Estimado" en la pantalla final.
-# La Economía Naranja aporta ~3% del PIB global, este multiplicador es simbólico.
+# Multiplicador BID para el "PIB Creativo Estimado" (retirado del juego, sin uso).
 PIB_MULTIPLICADOR = 30

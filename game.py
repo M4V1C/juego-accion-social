@@ -72,7 +72,6 @@ class Player:
     nombre: str
     rol: str
     mc: int = MC_INICIAL
-    pi: int = 0
     proyectos: List[Card] = field(default_factory=list)
     mano: List[Card] = field(default_factory=list)
 
@@ -243,7 +242,7 @@ class GameController:
             j.mc -= j.debe_pagar_entradas
             self.oponente.mc += j.debe_pagar_entradas
             self.log_append(
-                f"{j.nombre} paga {j.debe_pagar_entradas} MC de entradas al Teatro de {self.oponente.nombre}."
+                f"{j.nombre} paga ${j.debe_pagar_entradas} de entradas al Teatro de {self.oponente.nombre}."
             )
             j.debe_pagar_entradas = 0
 
@@ -251,13 +250,13 @@ class GameController:
         ingresos = j.ingresos_totales()
         if ingresos:
             j.mc += ingresos
-            self.log_append(f"{j.nombre} recibe {ingresos} MC de sus proyectos.")
+            self.log_append(f"{j.nombre} recibe ${ingresos} de sus proyectos.")
 
         # Bonus diferido (Largometraje O3).
         if j.mc_extra_proximo_turno:
             j.mc += j.mc_extra_proximo_turno
             self.log_append(
-                f"{j.nombre} recibe {j.mc_extra_proximo_turno} MC diferidos del Largometraje."
+                f"{j.nombre} recibe ${j.mc_extra_proximo_turno} diferidos del Largometraje."
             )
             j.mc_extra_proximo_turno = 0
 
@@ -318,7 +317,7 @@ class GameController:
         jugador = self.jugador_activo
         coste = jugador.coste_efectivo(carta)
         if jugador.mc < coste:
-            self.log_append(f"Fondos insuficientes para {carta.nombre} (coste {coste} MC).")
+            self.log_append(f"Fondos insuficientes para {carta.nombre} (coste ${coste}).")
             return
         # Limitación de 3 proyectos activos (relacionado con criterio de victoria).
         if carta.tipo == CardType.PROYECTO and len(jugador.proyectos) >= PROYECTOS_PARA_GANAR:
@@ -330,7 +329,6 @@ class GameController:
 
         if carta.tipo == CardType.PROYECTO:
             jugador.proyectos.append(carta)
-            jugador.pi += carta.puntos_pi
             # Aplicar G5 pendiente si es el primer proyecto.
             if jugador.g5_pendiente:
                 carta.bonus_g5 = 4
@@ -343,7 +341,7 @@ class GameController:
         if carta.efecto_func is not None:
             carta.efecto_func(self, jugador, self.oponente)
 
-        self.log_append(f"{jugador.nombre} juega '{carta.nombre}' (coste {coste} MC).")
+        self.log_append(f"{jugador.nombre} juega '{carta.nombre}' (coste ${coste}).")
 
         # Impulsores no van a la zona activa: van al descarte tras usarse.
         if carta.tipo == CardType.IMPULSOR:

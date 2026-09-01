@@ -16,7 +16,6 @@ from constants import (
     CARD_WIDTH, CARD_HEIGHT, CARD_GAP, HAND_Y,
     AREA_SUPERIOR_H, AREA_CENTRAL_BOTTOM, AREA_INFERIOR_Y,
     LOG_BAND_Y, LOG_BAND_H, PROYECTOS_PARA_GANAR,
-    PIB_MULTIPLICADOR,
 )
 from game import GameController, GameState, Player
 
@@ -138,7 +137,7 @@ class Renderer:
         surf = self.font_sm.render(etiqueta, True, COLORS["negro"])
         self.screen.blit(surf, (20, 10))
 
-        stats = (f"MC: {oponente.mc}   |   PI: {oponente.pi}   |   "
+        stats = (f"$ {oponente.mc}   |   "
                  f"Proyectos: {len(oponente.proyectos)}/{PROYECTOS_PARA_GANAR}   |   "
                  f"Mano: {len(oponente.mano)}")
         surf = self.font_md.render(stats, True, COLORS["azul_texto"])
@@ -187,9 +186,9 @@ class Renderer:
             ctrl.jugador_activo.nombre,
             ctrl.jugador_activo.rol,
             "",
-            f"MC: {ctrl.jugador_activo.mc}",
-            f"PI: {ctrl.jugador_activo.pi}",
-            f"Ingresos/turno: {ctrl.jugador_activo.ingresos_totales()}",
+            f"Dinero: ${ctrl.jugador_activo.mc}",
+            f"Ingresos/turno: +${ctrl.jugador_activo.ingresos_totales()}",
+            f"Proyectos: {len(ctrl.jugador_activo.proyectos)}/{PROYECTOS_PARA_GANAR}",
         ]
         y = rect_turno.y + 55
         for linea in info:
@@ -219,7 +218,7 @@ class Renderer:
 
         Se dibuja sobre el área central sin alterar los paneles de proyectos
         (rect_proj) ni de turno (rect_turno). Facilita la toma de decisiones
-        al ver simultáneamente MC, PI, proyectos y modificadores rivales.
+        al ver simultáneamente dinero, proyectos y modificadores rivales.
         """
         panel = pygame.Rect(10, 100, 280, 295)
         pygame.draw.rect(self.screen, COLORS["blanco"], panel, border_radius=8)
@@ -261,15 +260,15 @@ class Renderer:
         surf = self.font_xs.render(jugador.rol, True, COLORS["gris_oscuro"])
         self.screen.blit(surf, (rect.x + 6, rect.y + 24))
 
-        # Stats: MC · PI · Proyectos · Mano.
-        stats = (f"MC {jugador.mc}   PI {jugador.pi}   "
+        # Stats: Dinero · Proyectos · Mano.
+        stats = (f"${jugador.mc}   "
                  f"Proy {len(jugador.proyectos)}/{PROYECTOS_PARA_GANAR}   "
                  f"Mano {len(jugador.mano)}")
         surf = self.font_sm.render(stats, True, COLORS["negro"])
         self.screen.blit(surf, (rect.x + 6, rect.y + 40))
 
         # Ingresos por turno.
-        ing = f"Ingresos/turno: +{jugador.ingresos_totales()} MC"
+        ing = f"Ingresos/turno: +${jugador.ingresos_totales()}"
         surf = self.font_xs.render(ing, True, COLORS["azul_texto"])
         self.screen.blit(surf, (rect.x + 6, rect.y + 62))
 
@@ -287,8 +286,8 @@ class Renderer:
                 pygame.draw.rect(self.screen, COLORS["naranja"], slot_rect, 2, border_radius=4)
                 surf = self.font_xs.render(p.id, True, COLORS["negro"])
                 self.screen.blit(surf, surf.get_rect(midtop=(slot_rect.centerx, slot_rect.y + 2)))
-                pi_txt = f"PI{p.puntos_pi}"
-                surf = self.font_xs.render(pi_txt, True, COLORS["gris_oscuro"])
+                ing_txt = f"+${p.ingresos}"
+                surf = self.font_xs.render(ing_txt, True, COLORS["gris_oscuro"])
                 self.screen.blit(surf, surf.get_rect(midbottom=(slot_rect.centerx, slot_rect.bottom - 2)))
             else:
                 # Ranura vacía.
@@ -316,13 +315,13 @@ class Renderer:
         secciones = [
             ("OBJETIVO",
              [f"Completa {PROYECTOS_PARA_GANAR} proyectos Naranjas activos, o",
-              "provoca la bancarrota del oponente (MC ≤ 0)."]),
+              "provoca la bancarrota del oponente ($ ≤ 0)."]),
             ("RECURSOS",
-             ["Monedas Creativas (MC): financian todo.",
-              "Propiedad Intelectual (PI): puntaje cultural.",
+             ["Dinero ($): financia todo y evita la bancarrota.",
+              "Proyectos activos: cuentan hacia la victoria.",
               "Mano: máximo 5 cartas."]),
             ("TIPOS DE CARTAS",
-             ["Naranjas · Proyectos que dan PI y +MC/turno.",
+             ["Naranjas · Proyectos que dan +$/turno.",
               "Verdes · Impulsores: descuentos, inmunidades, IA.",
               "Rojas · Burocracia CR (CCSS, Hacienda, ACAM…)."]),
             ("FASES DEL TURNO",
@@ -332,7 +331,7 @@ class Renderer:
             ("CONSEJOS RÁPIDOS",
              ["Compra pronto G2, G6 o G7 para bloquear rojas.",
               "G1 (Claude CoWork) baja 50% coste Software/Diseño.",
-              "O3 es caro pero suelta +12 MC el turno siguiente."]),
+              "O3 es caro pero suelta +$12 el turno siguiente."]),
             ("CONTROLES",
              ["Clic izquierdo sobre una carta de tu mano · jugarla.",
               "Clic en el botón PASAR · saltar acción.",
@@ -390,18 +389,25 @@ class Renderer:
     # ---------------------- log
     def _draw_log(self, ctrl: GameController) -> None:
         # Banda dedicada entre el área central y la mano, para no pisar cartas.
-        pygame.draw.rect(self.screen, COLORS["gris_claro"],
-                         (0, LOG_BAND_Y, SCREEN_WIDTH, LOG_BAND_H))
+        band_rect = pygame.Rect(0, LOG_BAND_Y, SCREEN_WIDTH, LOG_BAND_H)
+        pygame.draw.rect(self.screen, COLORS["gris_claro"], band_rect)
         pygame.draw.line(self.screen, COLORS["gris_medio"],
                          (0, LOG_BAND_Y), (SCREEN_WIDTH, LOG_BAND_Y), 1)
         pygame.draw.line(self.screen, COLORS["gris_medio"],
-                         (0, LOG_BAND_Y + LOG_BAND_H), (SCREEN_WIDTH, LOG_BAND_Y + LOG_BAND_H), 1)
-        etiqueta = self.font_xs.render("REGISTRO DE PARTIDA", True, COLORS["gris_oscuro"])
-        self.screen.blit(etiqueta, (20, LOG_BAND_Y + 2))
-        y0 = LOG_BAND_Y + 18
-        for i, msg in enumerate(ctrl.log[-3:]):
-            surf = self.font_xs.render(msg, True, COLORS["gris_oscuro"])
-            self.screen.blit(surf, (20, y0 + i * 13))
+                         (0, LOG_BAND_Y + LOG_BAND_H),
+                         (SCREEN_WIDTH, LOG_BAND_Y + LOG_BAND_H), 1)
+        # Clip para garantizar que el texto del log NUNCA se pinte sobre la mano.
+        previous_clip = self.screen.get_clip()
+        self.screen.set_clip(band_rect)
+        try:
+            etiqueta = self.font_xs.render("REGISTRO DE PARTIDA", True, COLORS["gris_oscuro"])
+            self.screen.blit(etiqueta, (20, LOG_BAND_Y + 2))
+            y0 = LOG_BAND_Y + 18
+            for i, msg in enumerate(ctrl.log[-3:]):
+                surf = self.font_xs.render(msg, True, COLORS["gris_oscuro"])
+                self.screen.blit(surf, (20, y0 + i * 13))
+        finally:
+            self.screen.set_clip(previous_clip)
 
     # ---------------------- final
     def _draw_end_screen(self, ctrl: GameController) -> None:
@@ -421,18 +427,16 @@ class Renderer:
             f"Ganador: {ganador.nombre} ({ganador.rol})", True, COLORS["azul_texto"])
         self.screen.blit(surf, surf.get_rect(center=(w // 2, 160)))
 
-        pib = ganador.pi * PIB_MULTIPLICADOR
         infos = [
-            f"Puntos de Propiedad Intelectual (PI): {ganador.pi}",
             f"Proyectos completados: {len(ganador.proyectos)} / {PROYECTOS_PARA_GANAR}",
-            f"Monedas Creativas restantes: {ganador.mc} MC",
-            f"PIB Creativo Estimado: {pib} (multiplicador BID x{PIB_MULTIPLICADOR})",
+            f"Dinero restante: ${ganador.mc}",
+            f"Ingresos por turno finales: +${ganador.ingresos_totales()}",
         ]
-        y = 220
+        y = 240
         for txt in infos:
             surf = self.font_md.render(txt, True, COLORS["negro"])
             self.screen.blit(surf, surf.get_rect(center=(w // 2, y)))
-            y += 34
+            y += 40
 
         mensaje = ("¡Felicidades! Lograste surfear la burocracia institucional del siglo XX "
                    "y generar valor social a través del talento.")
@@ -464,13 +468,13 @@ class Renderer:
 
         # Coste (esquina inferior izq).
         if carta.tipo != CardType.CONSECUENCIA:
-            coste_txt = f"{carta.coste} MC"
+            coste_txt = f"${carta.coste}"
             surf = self.font_sm.render(coste_txt, True, COLORS["negro"])
             self.screen.blit(surf, (rect.x + 6, rect.bottom - 22))
 
         # PI / Ingresos (esquina inferior der para proyectos).
         if carta.tipo == CardType.PROYECTO:
-            info = f"PI:{carta.puntos_pi}  +{carta.ingresos}/t"
+            info = f"+${carta.ingresos}/turno"
             surf = self.font_xs.render(info, True, COLORS["negro"])
             self.screen.blit(surf, (rect.right - surf.get_width() - 6, rect.bottom - 20))
 

@@ -167,8 +167,8 @@ def efecto_G7(ctrl, jugador, oponente):
 
 
 def efecto_G8(ctrl, jugador, oponente):
-    """Educación Creativa Especializada: +1 PI inmediato."""
-    jugador.pi += 1
+    """Educación Creativa Especializada: +$5 inmediatos por especialización del personal."""
+    jugador.mc += 5
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +180,7 @@ def penalizacion_R1(ctrl, jugador, oponente):
         return "Inmune: Oficina Virtual Registrada."
     if jugador.mc >= 10:
         jugador.mc -= 10
-        return "Pagas 10 MC por alquilar una oficina ficticia."
+        return "Pagas $10 por alquilar una oficina ficticia."
     jugador.pierde_proximo_turno = True
     return "Sin fondos: pierdes el próximo turno."
 
@@ -192,35 +192,35 @@ def penalizacion_R2(ctrl, jugador, oponente):
     if coste == 0:
         return "Sin proyectos afectados por CCSS (26.33%)."
     jugador.mc -= coste
-    return f"Pagas {coste} MC por Cargas Sociales (CCSS 26.33%) de {len(afectados)} proyecto(s)."
+    return f"Pagas ${coste} por Cargas Sociales (CCSS 26.33%) de {len(afectados)} proyecto(s)."
 
 
 def penalizacion_R3(ctrl, jugador, oponente):
     if any(p.id == "O5" for p in jugador.proyectos):
         return "Inmune: Ruta de Turismo de Comunidad activa."
     jugador.mc -= 8
-    return "Pagas 8 MC por Impuesto de Marchamo Vehicular."
+    return "Pagas $8 por Impuesto de Marchamo Vehicular."
 
 
 def penalizacion_R4(ctrl, jugador, oponente):
     if jugador.tiene_propiedad_intelectual:
         return "Inmune: Propiedad Intelectual Protegida."
     jugador.mc -= 6
-    return "Pagas 6 MC por Canon Musical ACAM."
+    return "Pagas $6 por Canon Musical ACAM."
 
 
 def penalizacion_R5(ctrl, jugador, oponente):
     if any(p.id in ("O6", "O8") for p in jugador.proyectos):
         jugador.mc -= 10
-        return "Pagas 10 MC en tasas del CFIA (Teatro / Complejo Gastronómico)."
+        return "Pagas $10 en tasas del CFIA (Teatro / Complejo Gastronómico)."
     return "Sin proyecto Teatro ni Gastronómico. Sin coste."
 
 
 def penalizacion_R6(ctrl, jugador, oponente):
     if jugador.tiene_abogado:
-        return "Inmune: tu Bufete cancela el ajuste (>10 MC)."
+        return "Inmune: tu Bufete cancela el ajuste (>$10)."
     jugador.mc -= 12
-    return "Pagas 12 MC por Ajuste Impositivo de Hacienda (IVA)."
+    return "Pagas $12 por Ajuste Impositivo de Hacienda (IVA)."
 
 
 def penalizacion_R7(ctrl, jugador, oponente):
@@ -228,13 +228,13 @@ def penalizacion_R7(ctrl, jugador, oponente):
     if jugador.tiene_alianza_app:
         coste = coste // 2  # mitigación 50%
     jugador.mc -= coste
-    return f"Pagas {coste} MC por Impuesto de Construcción Municipal."
+    return f"Pagas ${coste} por Impuesto de Construcción Municipal."
 
 
 def penalizacion_R8(ctrl, jugador, oponente):
     if jugador.mc >= 5:
         jugador.mc -= 5
-        return "Pagas 5 MC de Impuesto a Personas Jurídicas."
+        return "Pagas $5 de Impuesto a Personas Jurídicas."
     # Sociedad disuelta: descartar 1 proyecto activo (el primero).
     if jugador.proyectos:
         descartado = jugador.proyectos.pop(0)
@@ -251,35 +251,35 @@ def construir_mazo_naranja() -> List[Card]:
     plantilla = [
         Card("O1", "Ecosistema de Software y Apps",   CardType.PROYECTO, "Soft Creativo",
              15, 1,
-             "Sinergia Digital: si tienes Claude CoWork, su coste baja a 7 MC. +3 MC/turno.",
+             "Sinergia Digital: si tienes Claude CoWork, su coste baja a $7. +$3/turno.",
              ingresos=3, efecto_func=efecto_O1),
         Card("O2", "Desarrollo de Videojuegos",       CardType.PROYECTO, "Soft Creativo",
              20, 1,
-             "PI Activa: al completarse, robas 1 Soporte (Verde) gratis. +5 MC/turno.",
+             "PI Activa: al completarse, robas 1 Soporte (Verde) gratis. +$5/turno.",
              ingresos=5, efecto_func=efecto_O2),
         Card("O3", "Producción de Largometraje",      CardType.PROYECTO, "Audiovisual",
              25, 2,
-             "Encadenamiento: oponente +3 MC ahora; tú +12 MC próximo turno. +8 MC/turno.",
+             "Encadenamiento: oponente +$3 ahora; tú +$12 próximo turno. +$8/turno.",
              ingresos=8, efecto_func=efecto_O3),
         Card("O4", "Álbum de Música de Estudio",      CardType.PROYECTO, "Artes e Ind.",
              10, 1,
-             "Derechos de PI: +1 MC de ingresos a cada uno de tus otros proyectos activos.",
+             "Derechos de PI: +$1 de ingresos a cada uno de tus otros proyectos activos.",
              ingresos=2, efecto_func=efecto_O4),
         Card("O5", "Ruta de Turismo de Comunidad",    CardType.PROYECTO, "Patrimonio",
              12, 1,
-             "Patrimonio Sostenible: inmune a Marchamo Vehicular (R3). +3 MC/turno.",
+             "Patrimonio Sostenible: inmune a Marchamo Vehicular (R3). +$3/turno.",
              ingresos=3, efecto_func=efecto_O5),
         Card("O6", "Complejo Gastronómico Local",     CardType.PROYECTO, "Gastronomía",
              15, 1,
-             "Fusión Cultural: -5 MC al próximo proyecto de Artes Escénicas. +4 MC/turno.",
+             "Fusión Cultural: -$5 al próximo proyecto de Artes Escénicas. +$4/turno.",
              ingresos=4, efecto_func=efecto_O6),
         Card("O7", "Pasarela de Moda y Diseño",       CardType.PROYECTO, "Diseño",
              10, 1,
-             "Impacto Visual: descarta 1 carta y roba 2 del mazo. +2 MC/turno.",
+             "Impacto Visual: descarta 1 carta y roba 2 del mazo. +$2/turno.",
              ingresos=2, efecto_func=efecto_O7),
         Card("O8", "Teatro de Artes Escénicas",       CardType.PROYECTO, "Artes",
              12, 1,
-             "Punto de Encuentro: el oponente te paga 2 MC al inicio de su próximo turno. +3 MC/turno.",
+             "Punto de Encuentro: el oponente te paga $2 al inicio de su próximo turno. +$3/turno.",
              ingresos=3, efecto_func=efecto_O8),
     ]
     mazo = []
@@ -302,19 +302,19 @@ def construir_mazo_verde() -> List[Card]:
              "Gobierno Ágil: revela 2 cartas Naranjas, quédate 1 y descarta la otra.",
              efecto_func=efecto_G3),
         Card("G4", "Incubadora Ruta N",           CardType.IMPULSOR, "Permanente", 6, 0,
-             "Ecosistema Innovador: +2 MC pasivos a cada proyecto activo por turno.",
+             "Ecosistema Innovador: +$2 pasivos a cada proyecto activo por turno.",
              efecto_func=efecto_G4),
         Card("G5", "Parque Biblioteca España",    CardType.IMPULSOR, "Social", 5, 0,
-             "Valor Social: +4 MC/turno a tu proyecto activo más barato.",
+             "Valor Social: +$4/turno a tu proyecto activo más barato.",
              efecto_func=efecto_G5),
         Card("G6", "Propiedad Intelectual Protegida", CardType.IMPULSOR, "Defensivo", 3, 0,
              "Patente de Ideas: inmune al canon musical ACAM (R4).",
              efecto_func=efecto_G6),
         Card("G7", "Abogado Corporativo (Bufete)", CardType.IMPULSOR, "Defensivo", 4, 0,
-             "Garantía Legal: cancela eventos tributarios que te obliguen a pagar > 10 MC.",
+             "Garantía Legal: cancela eventos tributarios que te obliguen a pagar > $10.",
              efecto_func=efecto_G7),
         Card("G8", "Educación Creativa Especializada", CardType.IMPULSOR, "Inmediato", 3, 0,
-             "Formación del Talento: +1 PI inmediato por especialización del personal.",
+             "Formación del Talento: recibes $5 inmediatos por especialización del personal.",
              efecto_func=efecto_G8),
     ]
     mazo = []
@@ -328,28 +328,35 @@ def construir_mazo_verde() -> List[Card]:
 def construir_mazo_rojo() -> List[Card]:
     plantilla = [
         Card("R1", "Rechazo de CCSS por Dirección Física", CardType.CONSECUENCIA, "CCSS", 0, 0,
-             "La CCSS deniega tu inscripción patronal por operar 100% digital.",
+             "Pagas $10 por alquilar una oficina ficticia; sin fondos pierdes 1 turno.\n"
+             "Inmune con G2 (Oficina Virtual).",
              efecto_func=penalizacion_R1),
-        Card("R2", "Cargas Sociales Patronales (26.33%)", CardType.CONSECUENCIA, "CCSS", 0, 0,
-             "Planilla: CCSS Salud, IVM, INA, IMAS, Banco Popular, FODESAF (~26.33%).",
+        Card("R2", "Cargas Sociales Patronales", CardType.CONSECUENCIA, "CCSS", 0, 0,
+             "Pagas $5 por cada proyecto Software, Audiovisual o Gastronómico activo.\n"
+             "CCSS+IVM+INA+IMAS+FODESAF ~26.33% de planilla.",
              efecto_func=penalizacion_R2),
         Card("R3", "Impuesto de Marchamo Vehicular", CardType.CONSECUENCIA, "Hacienda", 0, 0,
-             "Marchamo: 58% propiedad + 25% SOA + cobros municipales.",
+             "Pagas $8 fijos (58% propiedad + 25% SOA + municipal).\n"
+             "Inmune con O5 (Turismo de Comunidad).",
              efecto_func=penalizacion_R3),
         Card("R4", "Canon Privado por Música (ACAM)", CardType.CONSECUENCIA, "Canon", 0, 0,
-             "ACAM te cobra por ambientación acústica en tu actividad creativa.",
+             "Pierdes $6 fijos por canon musical ACAM.\n"
+             "Inmune con G6 (Propiedad Intelectual Protegida).",
              efecto_func=penalizacion_R4),
         Card("R5", "Registro y Timbres del CFIA", CardType.CONSECUENCIA, "Colegio", 0, 0,
-             "Tasas y timbres obligatorios del Colegio Federal de Ingenieros y Arquitectos.",
+             "Pagas $10 fijos si tienes Teatro (O8) o Complejo Gastronómico (O6).\n"
+             "Sin esos proyectos, sin coste.",
              efecto_func=penalizacion_R5),
         Card("R6", "Ajuste Impositivo de Hacienda (IVA)", CardType.CONSECUENCIA, "Hacienda", 0, 0,
-             "Declaración de IVA 13% mensual + renta trimestral en PDF redundante.",
+             "Pagas $12 fijos por IVA 13% mensual y renta trimestral.\n"
+             "Inmune con G7 (Abogado Corporativo).",
              efecto_func=penalizacion_R6),
         Card("R7", "Impuesto de Construcción Municipal", CardType.CONSECUENCIA, "Municipal", 0, 0,
-             "Inspección municipal: 1% sobre el valor de mejoras del local comercial.",
+             "Pagas $7 fijos (o $3 con Alianza APP): 1% sobre mejoras del local.",
              efecto_func=penalizacion_R7),
         Card("R8", "Impuesto a las Personas Jurídicas", CardType.CONSECUENCIA, "Registro", 0, 0,
-             "Impuesto anual para mantener tu SA / SRL activa en el Registro Nacional.",
+             "Pagas $5 fijos anuales por SA/SRL.\n"
+             "Sin fondos: descartas 1 proyecto activo.",
              efecto_func=penalizacion_R8),
     ]
     mazo = []
